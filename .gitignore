@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+.env.*
+*.log
+coverage/
+.DS_Store
+*.local
+.turbo/
+.cache/
+/.vite
+backend/build/
+frontend/dist/
+.cursor/
+.agent-tools/
+
+
