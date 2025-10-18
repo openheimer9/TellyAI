@@ -1,7 +1,7 @@
 require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const path = require('path');
@@ -16,7 +16,25 @@ console.log('📋 Environment Configuration:');
 
 const app = express();
 
-const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
+// CORS configuration
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  methods: ['GET', 'POST'],
+  credentials: true,
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+app.use(helmet());
+app.use(express.json());
+
+// Routes
+app.use('/api', require('./routes'));
+
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/tallybridge';
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
 const STORAGE_DIR = process.env.STORAGE_DIR || path.join(process.cwd(), 'uploads');
