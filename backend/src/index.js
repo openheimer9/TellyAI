@@ -49,15 +49,21 @@ async function connectWithRetry(retries = 3, delay = 5000) {
 
 // Configure Express middleware
 const corsOptions = {
-  origin: [process.env.CORS_ORIGIN, process.env.CORS_ORIGIN_PROD].filter(Boolean),
-  optionsSuccessStatus: 200,
+  origin: [
+    process.env.CORS_ORIGIN || "http://localhost:3000",
+    process.env.CORS_ORIGIN_PROD || "https://telly-ai.vercel.app"
+  ],
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 200,
 };
+console.log("🧠 CORS origins allowed:", corsOptions.origin);
 
 app.use(cors(corsOptions));
-app.use(morgan('dev'));
+app.options("*", cors(corsOptions));
 app.use(express.json());
+app.use(morgan('dev'));
+
 
 // Register routes
 app.use('/api', routes);
