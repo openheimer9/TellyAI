@@ -15,80 +15,34 @@ function el(name, content, attrs) {
   return `<${name}${attrStr}>${content}</${name}>`;
 }
 
-function createTallyXml(data) {
+export function generateTallyXML(transactions) {
   console.log('🔧 Creating Tally XML...');
-  console.log(`📊 Processing ${data.invoices?.length || 0} invoices`);
+  console.log(`📊 Processing ${transactions?.length || 0} transactions`);
   
   let xml = '<?xml version="1.0" encoding="utf-8"?>';
   xml += '<ENVELOPE><BODY><IMPORTDATA><REQUESTDATA>';
   
-  for (const inv of data.invoices) {
-    console.log(`📄 Processing invoice: ${inv.invoiceNumber}`);
+  for (const tx of transactions) {
+    console.log(`📄 Processing transaction: ${tx.description}`);
     
     xml += '<TALLYMESSAGE>';
-    xml += `<VOUCHER VCHTYPE="${escapeXml(inv.type)}" ACTION="Create">`;
-    xml += el('DATE', escapeXml(inv.date.replace(/-/g, '')));
-    xml += el('PARTYLEDGERNAME', escapeXml(inv.partyName));
-    xml += el('VOUCHERNUMBER', escapeXml(inv.invoiceNumber));
+    xml += `<VOUCHER VCHTYPE="${escapeXml(tx.type)}" ACTION="Create">`;
+    xml += el('DATE', escapeXml(tx.date.replace(/-/g, '')));
+    xml += el('VOUCHERNUMBER', escapeXml(tx.reference || ''));
+    xml += el('NARRATION', escapeXml(tx.description));
     
-    // Add GSTIN if available
-    if (inv.partyGSTIN) {
-      xml += el('PARTYGSTIN', escapeXml(inv.partyGSTIN));
-    }
+    // Add ledger entries
+    xml += '<ALLLEDGERENTRIES.LIST>';
+    xml += el('LEDGERNAME', escapeXml(tx.account));
+    xml += el('ISDEEMEDPOSITIVE', tx.type === 'debit' ? 'Yes' : 'No');
+    xml += el('AMOUNT', Number(tx.amount).toFixed(2));
+    xml += '</ALLLEDGERENTRIES.LIST>';
     
-    // Add line items
-    for (const item of inv.items) {
-      xml += '<ALLLEDGERENTRIES.LIST>';
-      xml += el('LEDGERNAME', escapeXml(item.description));
-      xml += el('ISDEEMEDPOSITIVE', 'No');
-      xml += el('AMOUNT', Number(item.amount).toFixed(2));
-      
-      // Add HSN code if available
-      if (item.hsnCode) {
-        xml += el('HSNCODE', escapeXml(item.hsnCode));
-      }
-      
-      // Add quantity and rate if available
-      if (item.quantity) {
-        xml += el('QUANTITY', Number(item.quantity).toFixed(2));
-      }
-      if (item.rate) {
-        xml += el('RATE', Number(item.rate).toFixed(2));
-      }
-      
-      xml += '</ALLLEDGERENTRIES.LIST>';
-    }
-    
-    // Add tax entries
-    if (inv.totals.cgst > 0) {
-      xml += '<ALLLEDGERENTRIES.LIST>';
-      xml += el('LEDGERNAME', 'CGST');
-      xml += el('ISDEEMEDPOSITIVE', 'No');
-      xml += el('AMOUNT', Number(inv.totals.cgst).toFixed(2));
-      xml += '</ALLLEDGERENTRIES.LIST>';
-    }
-    
-    if (inv.totals.sgst > 0) {
-      xml += '<ALLLEDGERENTRIES.LIST>';
-      xml += el('LEDGERNAME', 'SGST');
-      xml += el('ISDEEMEDPOSITIVE', 'No');
-      xml += el('AMOUNT', Number(inv.totals.sgst).toFixed(2));
-      xml += '</ALLLEDGERENTRIES.LIST>';
-    }
-    
-    if (inv.totals.igst > 0) {
-      xml += '<ALLLEDGERENTRIES.LIST>';
-      xml += el('LEDGERNAME', 'IGST');
-      xml += el('ISDEEMEDPOSITIVE', 'No');
-      xml += el('AMOUNT', Number(inv.totals.igst).toFixed(2));
-      xml += '</ALLLEDGERENTRIES.LIST>';
-    }
-    
-    // Add party ledger entry
+    // Add contra entry
     xml += '<LEDGERENTRIES.LIST>';
-    xml += el('LEDGERNAME', escapeXml(inv.partyName));
-    xml += el('ISDEEMEDPOSITIVE', inv.type === 'Purchase' ? 'Yes' : 'No');
-    xml += el('AMOUNT', Number(inv.totals.grandTotal).toFixed(2));
+    xml += el('LEDGERNAME', escapeXml(tx.contraAccount));
+    xml += el('ISDEEMEDPOSITIVE', tx.type === 'debit' ? 'No' : 'Yes');
+    xml += el('AMOUNT', Number(tx.amount).toFixed(2));
     xml += '</LEDGERENTRIES.LIST>';
     
     xml += '</VOUCHER>';
@@ -103,6 +57,27 @@ function createTallyXml(data) {
   return xml;
 }
 
-module.exports = { createTallyXml };
+export function validateTallyXML(xml) {
+  if (!xml || typeof xml !== 'string') return false;
+  
+  // Basic structure validation
+  const requiredElements = [
+    '<?xml',
+    '<ENVELOPE>',
+    '<BODY>',
+    '<IMPORTDATA>',
+    '<REQUESTDATA>',
+    '<TALLYMESSAGE>',
+    '<VOUCHER',
+    '</VOUCHER>',
+    '</TALLYMESSAGE>',
+    '</REQUESTDATA>',
+    '</IMPORTDATA>',
+    '</BODY>',
+    '</ENVELOPE>'
+  ];
+  
+  return requiredElements.every(el => xml.includes(el));
+}
 
 

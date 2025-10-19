@@ -6,6 +6,15 @@ export const api = {
   async post(path, body) {
     const { data } = await axios.post(`${base}${path}`, body);
     return { data };
+  },
+  
+  async postForm(path, formData) {
+    const { data } = await axios.post(`${base}${path}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return { data };
   }
 };
 

@@ -7,7 +7,7 @@ if (!apiKey) {
   console.log(`🔑 API Key configured: ${apiKey.substring(0, 20)}...`);
 }
 
-const DEFAULT_MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929';
+const DEFAULT_MODEL = process.env.CLAUDE_MODEL || 'claude-3-7-sonnet-20250219';
 
 async function createMessageVision({ system, base64, mediaType, tag }) {
   console.log('🚀 Starting Claude API call...');

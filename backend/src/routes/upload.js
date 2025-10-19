@@ -1,60 +1,57 @@
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+import { Router } from 'express';
+import multer from 'multer';
+import { extname, basename } from 'path';
+import cache from '../services/cache.js';
 
+const router = Router();
 const allowed = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.heic']);
 
-function registerUploadRoutes(app, storageDir) {
-  const upload = multer({
-    storage: multer.diskStorage({
-      destination: (_req, _file, cb) => cb(null, storageDir),
-      filename: (_req, file, cb) => {
-        const ext = path.extname(file.originalname).toLowerCase();
-        const base = path.basename(file.originalname, ext);
-        const name = `${base}-${Date.now()}${ext}`;
-        cb(null, name);
-      },
-    }),
-    fileFilter: (_req, file, cb) => {
-      const ext = path.extname(file.originalname).toLowerCase();
-      if (!allowed.has(ext)) return cb(new Error('Unsupported file type'));
-      cb(null, true);
-    },
-    limits: { fileSize: 25 * 1024 * 1024 },
-  });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (_req, file, cb) => {
+    const ext = extname(file.originalname).toLowerCase();
+    if (!allowed.has(ext)) return cb(new Error('Unsupported file type'));
+    cb(null, true);
+  },
+  limits: { fileSize: 25 * 1024 * 1024 },
+});
 
-  app.post('/api/upload', upload.single('file'), (req, res) => {
-    console.log('📤 File upload request received');
-    
-    if (!req.file) {
-      console.error('❌ No file uploaded');
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-    
-    console.log(`📁 File uploaded: ${req.file.originalname}`);
-    console.log(`💾 Saved as: ${req.file.filename}`);
-    console.log(`📊 File size: ${req.file.size} bytes`);
-    console.log(`🎭 MIME type: ${req.file.mimetype}`);
-    
-    const meta = {
-      filename: req.file.filename,
-      path: req.file.path,
-      mimetype: req.file.mimetype,
-      size: req.file.size,
-    };
-    
-    console.log('✅ File upload successful');
-    res.json({ upload: meta });
-  });
+router.post('/', upload.single('file'), (req, res) => {
+  console.log('📤 File upload request received');
+  
+  if (!req.file) {
+    console.error('❌ No file uploaded');
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+  
+  const ext = extname(req.file.originalname).toLowerCase();
+  const base = basename(req.file.originalname, ext);
+  const filename = `${base}-${Date.now()}${ext}`;
 
-  app.delete('/api/upload/:filename', (req, res) => {
-    const { filename } = req.params;
-    const full = path.join(storageDir, filename);
-    if (fs.existsSync(full)) fs.unlinkSync(full);
-    res.json({ deleted: true });
-  });
-}
+  const fileData = {
+    buffer: req.file.buffer,
+    mimetype: req.file.mimetype,
+    originalname: req.file.originalname,
+    size: req.file.size,
+  };
 
-module.exports = { registerUploadRoutes };
+  cache.set(filename, fileData);
+
+  console.log(`📁 File uploaded: ${req.file.originalname}`);
+  console.log(`💾 Saved as: ${filename}`);
+  console.log(`📊 File size: ${req.file.size} bytes`);
+  console.log(`🎭 MIME type: ${req.file.mimetype}`);
+  
+  const meta = {
+    filename: filename,
+    mimetype: req.file.mimetype,
+    size: req.file.size,
+  };
+  
+  console.log('✅ File upload successful');
+  res.json(meta);
+});
+
+export default router;
 
 
