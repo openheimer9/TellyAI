@@ -51,6 +51,8 @@ async function connectWithRetry(retries = 3, delay = 5000) {
 const corsOptions = {
   origin: [process.env.CORS_ORIGIN, process.env.CORS_ORIGIN_PROD].filter(Boolean),
   optionsSuccessStatus: 200,
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
 app.use(cors(corsOptions));
