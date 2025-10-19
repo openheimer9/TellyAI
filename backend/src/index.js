@@ -48,7 +48,12 @@ async function connectWithRetry(retries = 3, delay = 5000) {
 }
 
 // Configure Express middleware
-app.use(cors());
+const corsOptions = {
+  origin: [process.env.CORS_ORIGIN, process.env.CORS_ORIGIN_PROD].filter(Boolean),
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
 app.use(morgan('dev'));
 app.use(express.json());
 
