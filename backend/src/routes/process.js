@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { extname } from 'path';
 import { processDocument } from '../services/anthropic.js';
-import cache from '../services/cache.js';
+import axios from 'axios';
 
 const router = Router();
 
@@ -79,13 +79,11 @@ router.post('/', async (req, res) => {
   console.log(`📁 Processing file: ${filename}`);
   
   try {
-    const fileData = cache.get(filename);
-    if (!fileData) {
-      return res.status(404).json({ error: 'File not found' });
-    }
+    const response = await axios.get(filename, { responseType: 'arraybuffer' });
+    const buffer = Buffer.from(response.data, 'binary');
 
-    console.log(`✅ File exists in cache: ${filename}`);
-    console.log(`📊 File size: ${fileData.size} bytes`);
+    console.log(`✅ File downloaded from Cloudinary: ${filename}`);
+    console.log(`📊 File size: ${buffer.length} bytes`);
 
     const mode = detectType(filename);
     console.log(`🔍 Detection mode: ${mode}`);
@@ -99,7 +97,7 @@ router.post('/', async (req, res) => {
     }
 
     console.log('📖 Reading file for vision processing...');
-    const base64 = fileData.buffer.toString('base64');
+    const base64 = buffer.toString('base64');
     const ext = extname(filename).toLowerCase();
     const mediaType = mediaTypeForExt(ext);
     
@@ -110,9 +108,6 @@ router.post('/', async (req, res) => {
     console.log('✅ Processing completed successfully');
     
     const extraction = parseExtraction(result);
-    
-    cache.delete(filename);
-    console.log(`🗑️  Removed ${filename} from cache`);
 
     console.log('📤 Sending response to client');
     res.json({ extraction });

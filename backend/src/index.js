@@ -4,7 +4,6 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import morgan from 'morgan';
 import { join } from 'path';
-import { mkdir } from 'fs/promises';
 
 import routes from './routes/index.js';
 
@@ -18,15 +17,6 @@ console.log('📋 Environment Configuration:');
 console.log(`🌐 Port: ${port}`);
 console.log(`🗄️  MongoDB URI: ${mongoUri}`);
 console.log(`📁 Storage Directory: ${storageDir}`);
-
-// Create uploads directory if it doesn't exist
-try {
-  await mkdir(storageDir, { recursive: true });
-  console.log(`✅ Storage directory created/verified: ${storageDir}`);
-} catch (err) {
-  console.error('❌ Failed to create storage directory:', err);
-  process.exit(1);
-}
 
 // Configure MongoDB connection options
 const mongooseOptions = {
@@ -61,7 +51,6 @@ async function connectWithRetry(retries = 3, delay = 5000) {
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
-app.use('/uploads', express.static(storageDir));
 
 // Register routes
 app.use('/api', routes);
